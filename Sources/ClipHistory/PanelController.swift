@@ -12,12 +12,36 @@ private final class KeyablePanel: NSPanel {
 final class PanelController: NSObject, NSWindowDelegate {
     let model = PanelModel()
     private var panel: KeyablePanel?
+    private var keyMonitor: Any?
+
+    // Virtual key codes.
+    private let kP: UInt16 = 35, kUp: UInt16 = 126, kDown: UInt16 = 125
 
     override init() {
         super.init()
     }
 
+    deinit {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+    }
+
     var isVisible: Bool { panel?.isVisible ?? false }
+
+    /// Custom panel shortcuts that aren't plain text-editing commands:
+    /// ⌘P pin/unpin, ⌥↑ / ⌥↓ jump 5 rows. (Arrows/Return/Delete are handled
+    /// by the search field's delegate; this monitor only claims these combos.)
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.isVisible else { return event }
+            let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            let code = event.keyCode
+            if mods == [.command], code == self.kP { self.model.togglePinSelected(); return nil }
+            if mods == [.option],  code == self.kDown { self.model.jump(5);  return nil }
+            if mods == [.option],  code == self.kUp   { self.model.jump(-5); return nil }
+            return event
+        }
+    }
 
     func show() {
         let panel = panel ?? makePanel()
@@ -36,6 +60,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
+        installKeyMonitor()
         // Ask the search field to take focus (panel is reused across shows, so
         // first-responder isn't guaranteed to be restored on reopen).
         model.focusRequest += 1
@@ -43,6 +68,7 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     func hide() {
         panel?.orderOut(nil)
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor); self.keyMonitor = nil }
     }
 
     private func makePanel() -> KeyablePanel {

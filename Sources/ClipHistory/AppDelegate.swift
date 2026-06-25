@@ -44,6 +44,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.store.delete(id: item.id)
             self.panelController.model.items = self.store.all()
         }
+        panelController.model.onTogglePin = { [weak self] item in
+            guard let self else { return }
+            self.store.setPinned(id: item.id, pinned: !item.pinned)
+            self.panelController.model.items = self.store.all()
+        }
     }
 
     private func setupMonitor() {
@@ -68,6 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         previousApp = NSWorkspace.shared.frontmostApplication
         panelController.model.query = ""
         panelController.model.expandedItem = nil
+        panelController.model.selection = 0      // always reopen on the newest item
         panelController.model.items = store.all()
         panelController.show()
     }

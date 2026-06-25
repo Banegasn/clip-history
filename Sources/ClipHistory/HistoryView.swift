@@ -102,8 +102,13 @@ private struct RowView: View {
                 .font(.system(size: 13))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
-            // Type label + expand chevron, vertically centered, on every row.
+            // Pin marker + type label + expand chevron, vertically centered, on every row.
             HStack(spacing: 6) {
+                if item.pinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(selected ? Color.white : Color.orange)
+                }
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
                 Image(systemName: "chevron.right")
@@ -181,9 +186,17 @@ private struct DetailView: View {
                     .padding(14)
             }
 
-            if let link = item.link {
-                Divider()
-                HStack(spacing: 10) {
+            Divider()
+            HStack(spacing: 10) {
+                Button {
+                    model.togglePin(item)
+                } label: {
+                    Label(item.pinned ? "Unpin" : "Pin",
+                          systemImage: item.pinned ? "pin.slash" : "pin")
+                }
+                .buttonStyle(.bordered)
+
+                if let link = item.link {
                     Button {
                         NSWorkspace.shared.open(link)
                         model.onClose()
@@ -191,17 +204,20 @@ private struct DetailView: View {
                         Label("Open Link", systemImage: "safari")
                     }
                     .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
                     Text(link.absoluteString)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                Spacer(minLength: 0)
+                Text("⌘P")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
             }
+            .controlSize(.regular)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
     }
 

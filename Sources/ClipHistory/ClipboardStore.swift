@@ -35,10 +35,26 @@ final class ClipboardStore {
                 blob       BLOB,
                 thumb      BLOB,
                 hash       TEXT    NOT NULL,
-                created_at REAL    NOT NULL
+                created_at REAL    NOT NULL,
+                pinned     INTEGER NOT NULL DEFAULT 0
             );
             """)
         exec("CREATE INDEX IF NOT EXISTS idx_hash ON items(hash);")
+        migrate()
+    }
+
+    /// Schema upgrades for databases created by earlier versions.
+    private func migrate() {
+        var hasPinned = false
+        if let stmt = prepare("PRAGMA table_info(items);") {
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                if columnText(stmt, 1) == "pinned" { hasPinned = true }
+            }
+            sqlite3_finalize(stmt)
+        }
+        if !hasPinned {
+            exec("ALTER TABLE items ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;")
+        }
     }
 
     deinit { sqlite3_close(db) }
@@ -50,12 +66,23 @@ final class ClipboardStore {
     @discardableResult
     func insert(kind: ClipKind, text: String?, blob: Data?, thumb: Data?) -> Bool {
         let hash = Self.contentHash(kind: kind, text: text, blob: blob)
+        let now = Date().timeIntervalSince1970
 
-        // Move-to-top: drop any previous copy of identical content.
-        if let stmt = prepare("DELETE FROM items WHERE hash = ?;") {
-            bindText(stmt, 1, hash)
-            sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
+        // If identical content already exists, just move it to the top — this
+        // preserves its pinned state instead of dropping and re-inserting it.
+        if let sel = prepare("SELECT id FROM items WHERE hash = ? LIMIT 1;") {
+            bindText(sel, 1, hash)
+            let exists = sqlite3_step(sel) == SQLITE_ROW
+            sqlite3_finalize(sel)
+            if exists {
+                if let upd = prepare("UPDATE items SET created_at = ? WHERE hash = ?;") {
+                    sqlite3_bind_double(upd, 1, now)
+                    bindText(upd, 2, hash)
+                    sqlite3_step(upd)
+                    sqlite3_finalize(upd)
+                }
+                return true
+            }
         }
 
         guard let stmt = prepare(
@@ -66,12 +93,20 @@ final class ClipboardStore {
         if let blob { bindBlob(stmt, 3, blob) } else { sqlite3_bind_null(stmt, 3) }
         if let thumb { bindBlob(stmt, 4, thumb) } else { sqlite3_bind_null(stmt, 4) }
         bindText(stmt, 5, hash)
-        sqlite3_bind_double(stmt, 6, Date().timeIntervalSince1970)
+        sqlite3_bind_double(stmt, 6, now)
         let ok = sqlite3_step(stmt) == SQLITE_DONE
         sqlite3_finalize(stmt)
 
         enforceCap()
         return ok
+    }
+
+    func setPinned(id: Int64, pinned: Bool) {
+        guard let stmt = prepare("UPDATE items SET pinned = ? WHERE id = ?;") else { return }
+        sqlite3_bind_int(stmt, 1, pinned ? 1 : 0)
+        sqlite3_bind_int64(stmt, 2, id)
+        sqlite3_step(stmt)
+        sqlite3_finalize(stmt)
     }
 
     func delete(id: Int64) {
@@ -86,9 +121,10 @@ final class ClipboardStore {
     }
 
     private func enforceCap() {
+        // Pinned items are never evicted; the cap applies to unpinned items only.
         exec("""
-            DELETE FROM items WHERE id NOT IN (
-                SELECT id FROM items ORDER BY created_at DESC LIMIT \(cap)
+            DELETE FROM items WHERE pinned = 0 AND id NOT IN (
+                SELECT id FROM items WHERE pinned = 0 ORDER BY created_at DESC LIMIT \(cap)
             );
             """)
     }
@@ -98,7 +134,7 @@ final class ClipboardStore {
     /// All items newest-first, without the heavy full `blob` (thumbnails only).
     func all() -> [ClipItem] {
         guard let stmt = prepare(
-            "SELECT id, kind, text, thumb, created_at FROM items ORDER BY created_at DESC;"
+            "SELECT id, kind, text, thumb, created_at, pinned FROM items ORDER BY pinned DESC, created_at DESC;"
         ) else { return [] }
         defer { sqlite3_finalize(stmt) }
 
@@ -109,7 +145,9 @@ final class ClipboardStore {
             let text = columnText(stmt, 2)
             let thumb = columnBlob(stmt, 3)
             let created = Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4))
-            result.append(ClipItem(id: id, kind: kind, text: text, thumb: thumb, createdAt: created))
+            let pinned = sqlite3_column_int(stmt, 5) != 0
+            result.append(ClipItem(id: id, kind: kind, text: text, thumb: thumb,
+                                   createdAt: created, pinned: pinned))
         }
         return result
     }

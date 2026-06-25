@@ -27,6 +27,8 @@ Prefer to build it yourself? See [Build & run](#build--run) below.
 - **Type to filter**, ↑/↓ to move, **Enter** (or click) to paste straight into the app you were using, **Esc** to dismiss.
 - **→ expands** a clip to its full content (multi-line text, larger image); **←** or **Esc** goes back. Rows show a 2-line preview.
 - **Delete an entry** with ⌘⌫ (or ⌫/⌦ when the search box is empty).
+- **Pin favorites** with ⌘P — pinned clips float to the top and are never evicted by the 200-item cap.
+- **Jump 5 rows** at a time with ⌥↑ / ⌥↓.
 - Detail view shows an **Open Link** button when the clip is a web URL.
 - Menu-bar only — no Dock icon, no window clutter.
 - Skips content marked *concealed*/*transient* by password managers.

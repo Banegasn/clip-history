@@ -21,6 +21,8 @@ struct ClipItem: Identifiable, Hashable {
     /// Small PNG thumbnail for `.image`; nil otherwise.
     let thumb: Data?
     let createdAt: Date
+    /// Pinned items float to the top and are never evicted by the size cap.
+    var pinned: Bool = false
 
     /// First non-empty line — compact label (logs, single-line contexts).
     var preview: String {

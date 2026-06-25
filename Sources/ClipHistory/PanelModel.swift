@@ -15,6 +15,8 @@ final class PanelModel: ObservableObject {
     var onClose: () -> Void = {}
     /// Remove an item from the persistent store (and refresh `items`).
     var onDelete: (ClipItem) -> Void = { _ in }
+    /// Toggle an item's pinned flag in the store (and refresh `items`).
+    var onTogglePin: (ClipItem) -> Void = { _ in }
 
     var filtered: [ClipItem] {
         guard !query.isEmpty else { return items }
@@ -26,6 +28,11 @@ final class PanelModel: ObservableObject {
         let count = filtered.count
         guard count > 0 else { return }
         selection = min(max(0, selection + delta), count - 1)
+    }
+
+    /// Jump the selection by several rows at once (⌥↑/⌥↓).
+    func jump(_ delta: Int) {
+        move(delta)
     }
 
     func pick(at index: Int) {
@@ -51,6 +58,23 @@ final class PanelModel: ObservableObject {
 
     func collapse() {
         expandedItem = nil
+    }
+
+    /// Pin/unpin the active item (expanded one, or the current selection).
+    func togglePinSelected() {
+        let list = filtered
+        let target = expandedItem ?? (list.indices.contains(selection) ? list[selection] : nil)
+        guard let item = target else { return }
+        togglePin(item)
+    }
+
+    func togglePin(_ item: ClipItem) {
+        onTogglePin(item)                      // store toggle + refresh of `items`
+        // Keep the view pointed at the same item as it re-sorts (pins float up).
+        if let refreshed = items.first(where: { $0.id == item.id }) {
+            if expandedItem?.id == item.id { expandedItem = refreshed }
+            if let idx = filtered.firstIndex(where: { $0.id == item.id }) { selection = idx }
+        }
     }
 
     /// Delete the current selection from history, then keep the selection valid.
