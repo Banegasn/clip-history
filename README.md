@@ -22,6 +22,8 @@ Prefer to build it yourself? See [Build & run](#build--run) below.
 - **Persists to disk** (SQLite) and survives reboots — capped at the 200 most recent items.
 - **Type to filter**, ↑/↓ to move, **Enter** (or click) to paste straight into the app you were using, **Esc** to dismiss.
 - **→ expands** a clip to its full content (multi-line text, larger image); **←** or **Esc** goes back. Rows show a 2-line preview.
+- **Delete an entry** with ⌘⌫ (or ⌫/⌦ when the search box is empty).
+- Detail view shows an **Open Link** button when the clip is a web URL.
 - Menu-bar only — no Dock icon, no window clutter.
 - Skips content marked *concealed*/*transient* by password managers.
 

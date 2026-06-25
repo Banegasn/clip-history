@@ -10,9 +10,11 @@ final class PanelModel: ObservableObject {
     /// When non-nil, the panel shows the full content of this item (→ to open).
     @Published var expandedItem: ClipItem?
 
-    /// The controller wires these to perform the actual paste / dismiss.
+    /// The controller wires these to perform the actual paste / dismiss / delete.
     var onPick: (ClipItem) -> Void = { _ in }
     var onClose: () -> Void = {}
+    /// Remove an item from the persistent store (and refresh `items`).
+    var onDelete: (ClipItem) -> Void = { _ in }
 
     var filtered: [ClipItem] {
         guard !query.isEmpty else { return items }
@@ -49,5 +51,14 @@ final class PanelModel: ObservableObject {
 
     func collapse() {
         expandedItem = nil
+    }
+
+    /// Delete the current selection from history, then keep the selection valid.
+    func deleteSelected() {
+        let list = filtered
+        guard list.indices.contains(selection) else { return }
+        onDelete(list[selection])          // store delete + refresh of `items`
+        let count = filtered.count
+        selection = count == 0 ? 0 : min(selection, count - 1)
     }
 }

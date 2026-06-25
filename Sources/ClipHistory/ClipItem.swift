@@ -43,8 +43,18 @@ struct ClipItem: Identifiable, Hashable {
         }
     }
 
-    var hasMoreThanOneLine: Bool {
-        (text ?? "").contains(where: \.isNewline)
+    /// A web link if the whole clip is a single http(s) URL — drives the
+    /// "Open Link" button in the detail view.
+    var link: URL? {
+        guard kind == .text else { return nil }
+        let trimmed = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(where: \.isWhitespace),
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              url.host != nil
+        else { return nil }
+        return url
     }
 
     /// Lowercased haystack for search matching.

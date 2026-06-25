@@ -39,6 +39,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupPanel() {
         panelController.model.onPick = { [weak self] item in self?.paste(item) }
         panelController.model.onClose = { [weak self] in self?.panelController.hide() }
+        panelController.model.onDelete = { [weak self] item in
+            guard let self else { return }
+            self.store.delete(id: item.id)
+            self.panelController.model.items = self.store.all()
+        }
     }
 
     private func setupMonitor() {

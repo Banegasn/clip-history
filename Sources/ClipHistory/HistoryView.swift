@@ -1,8 +1,9 @@
 import SwiftUI
+import AppKit
 
 /// The searchable clipboard-history list shown in the floating panel.
 /// Type to filter, ↑/↓ to move, → to expand full content (← / Esc to go back),
-/// Return to paste, Esc to dismiss, click to paste.
+/// ⌘⌫ to delete the selection, Return to paste, Esc to dismiss, click to paste.
 struct HistoryView: View {
     @ObservedObject var model: PanelModel
 
@@ -11,7 +12,7 @@ struct HistoryView: View {
             searchBar
             Divider()
             if let expanded = model.expandedItem {
-                DetailView(item: expanded)
+                DetailView(item: expanded, model: model)
             } else {
                 list
             }
@@ -42,6 +43,7 @@ struct HistoryView: View {
                 onMoveUp: { model.move(-1) },
                 onMoveRight: { model.expandSelected() },
                 onMoveLeft: { model.collapse() },
+                onDeleteEntry: { model.deleteSelected() },
                 onSubmit: { model.pickSelected() },
                 onCancel: { model.onClose() }
             )
@@ -91,7 +93,7 @@ private struct RowView: View {
     let selected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(spacing: 10) {                       // .center: trailing aligns with text
             thumbnail
                 .frame(width: 28, height: 28)
             Text(item.displayText.isEmpty ? "(empty)" : item.displayText)
@@ -100,17 +102,14 @@ private struct RowView: View {
                 .font(.system(size: 13))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 3) {
+            // Type label + expand chevron, vertically centered, on every row.
+            HStack(spacing: 6) {
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(selected ? Color.white.opacity(0.8) : Color.secondary)
-                if item.hasMoreThanOneLine {
-                    // Hint that → expands the full content.
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(selected ? Color.white.opacity(0.8) : Color.secondary)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
             }
+            .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -159,6 +158,7 @@ private struct RowView: View {
 /// ← or Esc returns to the list; Enter still pastes.
 private struct DetailView: View {
     let item: ClipItem
+    @ObservedObject var model: PanelModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -179,6 +179,28 @@ private struct DetailView: View {
                 content
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
+            }
+
+            if let link = item.link {
+                Divider()
+                HStack(spacing: 10) {
+                    Button {
+                        NSWorkspace.shared.open(link)
+                        model.onClose()
+                    } label: {
+                        Label("Open Link", systemImage: "safari")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    Text(link.absoluteString)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
         }
     }

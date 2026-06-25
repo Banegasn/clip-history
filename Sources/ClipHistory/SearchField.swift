@@ -19,6 +19,7 @@ struct SearchField: NSViewRepresentable {
     var onMoveUp: () -> Void
     var onMoveRight: () -> Void
     var onMoveLeft: () -> Void
+    var onDeleteEntry: () -> Void
     var onSubmit: () -> Void
     var onCancel: () -> Void
 
@@ -88,6 +89,17 @@ struct SearchField: NSViewRepresentable {
                 parent.onMoveDown(); return true
             case #selector(NSResponder.moveUp(_:)):
                 parent.onMoveUp(); return true
+            case #selector(NSResponder.deleteToBeginningOfLine(_:)):
+                // ⌘⌫ — always deletes the selected entry.
+                parent.onDeleteEntry(); return true
+            case #selector(NSResponder.deleteBackward(_:)),
+                 #selector(NSResponder.deleteForward(_:)):
+                // Plain ⌫ / ⌦ delete the entry only when the search box is empty,
+                // so normal query editing still works.
+                if (textView.string as NSString).length == 0 {
+                    parent.onDeleteEntry(); return true
+                }
+                return false
             case #selector(NSResponder.moveRight(_:)):
                 // Only hijack → when the caret is at the end of the query, so it
                 // doesn't fight normal caret movement while editing the search.
