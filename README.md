@@ -6,6 +6,15 @@ brings it back with **⇧⌘V**.
 
 ![menu bar agent](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift](https://img.shields.io/badge/Swift-6-orange)
 
+## Download
+
+**[⬇︎ Download the latest .dmg](https://github.com/banegasn/clip-history/releases/latest)** — open it, drag **ClipHistory** to **Applications**, then:
+
+1. The app isn't notarized by Apple, so on first launch macOS warns it "cannot be checked". Open **System Settings ▸ Privacy & Security** and click **Open Anyway** (or run `xattr -dr com.apple.quarantine /Applications/ClipHistory.app`).
+2. Grant **Accessibility** when asked — required so it can paste with ⌘V.
+
+Prefer to build it yourself? See [Build & run](#build--run) below.
+
 ## Features
 
 - **⇧⌘V** opens a centered, searchable history panel.
