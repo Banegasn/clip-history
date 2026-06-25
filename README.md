@@ -6,6 +6,10 @@ brings it back with **⇧⌘V**.
 
 ![menu bar agent](https://img.shields.io/badge/macOS-14%2B-blue) ![Swift](https://img.shields.io/badge/Swift-6-orange)
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="ClipHistory panel — searchable clipboard history with text and image entries" width="660">
+</p>
+
 ## Download
 
 **[⬇︎ Download the latest .dmg](https://github.com/banegasn/clip-history/releases/latest)** — open it, drag **ClipHistory** to **Applications**, then:

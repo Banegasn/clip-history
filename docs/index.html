@@ -5,158 +5,230 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClipHistory — open-source macOS clipboard manager</title>
 <meta name="description" content="A tiny, open-source macOS clipboard-history manager. Lives in the menu bar, captures text, images and files, and brings them back with ⇧⌘V.">
+<meta property="og:title" content="ClipHistory — macOS clipboard manager">
+<meta property="og:description" content="Menu-bar clipboard history for macOS. Press ⇧⌘V, search, paste. Open source, Swift + SwiftUI.">
+<meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
 <style>
   :root{
-    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a313c;
-    --text:#e6edf3; --muted:#9aa7b4; --accent:#4f8cff; --accent2:#7aa2ff;
-    --radius:14px;
+    --bg:#080b11;
+    --panel:rgba(255,255,255,.04);
+    --panel-strong:rgba(255,255,255,.06);
+    --border:rgba(255,255,255,.09);
+    --border-bright:rgba(255,255,255,.16);
+    --text:#eef2f7;
+    --muted:#9aa6b6;
+    --faint:#6b7686;
+    --a1:#5b8cff;   /* blue  */
+    --a2:#9d6bff;   /* violet */
+    --a3:#46d6c6;   /* teal accent */
+    --radius:18px;
+    --maxw:980px;
   }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{scroll-behavior:smooth; -webkit-text-size-adjust:100%}
   body{
-    margin:0; background:radial-gradient(1200px 600px at 50% -10%, #182338 0%, var(--bg) 55%);
-    color:var(--text); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
+    background:var(--bg); color:var(--text);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative;
   }
-  a{color:var(--accent2); text-decoration:none}
-  a:hover{text-decoration:underline}
-  .wrap{max-width:880px; margin:0 auto; padding:0 22px}
+  /* ambient gradient mesh */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(620px 420px at 50% -8%, rgba(91,140,255,.30), transparent 60%),
+      radial-gradient(560px 420px at 85% 8%, rgba(157,107,255,.22), transparent 55%),
+      radial-gradient(520px 420px at 12% 18%, rgba(70,214,198,.14), transparent 55%);
+  }
+  a{color:var(--text); text-decoration:none}
   code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   kbd{
-    background:var(--panel2); border:1px solid var(--border); border-bottom-width:2px;
-    border-radius:6px; padding:.1em .45em; font-size:.85em; color:var(--text); white-space:nowrap;
+    background:var(--panel-strong); border:1px solid var(--border-bright); border-bottom-width:2px;
+    border-radius:7px; padding:.12em .5em; font-size:.84em; color:var(--text); white-space:nowrap;
   }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 22px}
+  .grad{background:linear-gradient(100deg,var(--a3),var(--a1) 45%,var(--a2)); -webkit-background-clip:text; background-clip:text; color:transparent}
 
-  header{text-align:center; padding:84px 0 52px}
-  .logo{font-size:64px; line-height:1}
-  h1{font-size:44px; margin:.3em 0 .1em; letter-spacing:-.02em}
-  .tagline{color:var(--muted); font-size:19px; margin:0 auto; max-width:560px}
-  .badges{margin-top:18px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
-  .badge{background:var(--panel); border:1px solid var(--border); color:var(--muted);
-    padding:4px 11px; border-radius:999px; font-size:13px}
-  .cta{margin-top:30px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  /* ---- nav ---- */
+  nav{
+    position:sticky; top:0; z-index:50; backdrop-filter:saturate(140%) blur(14px);
+    background:rgba(8,11,17,.62); border-bottom:1px solid var(--border);
+  }
+  nav .wrap{display:flex; align-items:center; gap:14px; height:60px}
+  .brand{display:flex; align-items:center; gap:9px; font-weight:700; letter-spacing:-.01em}
+  .brand .mk{font-size:20px}
+  nav .spacer{flex:1}
+  nav a.link{color:var(--muted); font-size:14.5px; padding:8px 10px; border-radius:8px}
+  nav a.link:hover{color:var(--text); background:var(--panel)}
   .btn{
-    display:inline-block; padding:12px 22px; border-radius:10px; font-weight:600; font-size:15px;
-    background:linear-gradient(180deg,var(--accent2),var(--accent)); color:#fff; border:1px solid #3b6fd0;
+    display:inline-flex; align-items:center; gap:8px; padding:11px 20px; border-radius:11px;
+    font-weight:600; font-size:14.5px; border:1px solid transparent; transition:transform .15s ease, filter .15s ease, background .15s ease;
   }
-  .btn:hover{text-decoration:none; filter:brightness(1.07)}
-  .btn.secondary{background:var(--panel); color:var(--text); border:1px solid var(--border)}
+  .btn.primary{background:linear-gradient(180deg,var(--a1),#3f6ddb); color:#fff; box-shadow:0 8px 24px rgba(63,109,219,.35)}
+  .btn.primary:hover{transform:translateY(-1px); filter:brightness(1.08)}
+  .btn.ghost{background:var(--panel); color:var(--text); border-color:var(--border-bright)}
+  .btn.ghost:hover{background:var(--panel-strong); transform:translateY(-1px)}
+  nav .btn{padding:9px 16px}
 
-  section{padding:34px 0}
-  h2{font-size:25px; letter-spacing:-.01em; margin:0 0 18px}
-  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px}
-  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 18px 16px}
-  .card h3{margin:.1em 0 .35em; font-size:16px}
+  /* ---- hero ---- */
+  header{text-align:center; padding:84px 0 26px}
+  .pill{
+    display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+    background:var(--panel); border:1px solid var(--border-bright); color:var(--muted); font-size:13px; margin-bottom:24px;
+  }
+  .pill .dot{width:7px; height:7px; border-radius:50%; background:var(--a3); box-shadow:0 0 10px var(--a3)}
+  h1{font-size:clamp(40px,7vw,68px); line-height:1.02; letter-spacing:-.03em; font-weight:800}
+  .tagline{color:var(--muted); font-size:clamp(16px,2.4vw,20px); max-width:600px; margin:20px auto 0}
+  .tagline kbd{font-size:.92em}
+  .cta{margin-top:32px; display:flex; gap:13px; justify-content:center; flex-wrap:wrap}
+  .subnote{margin-top:16px; color:var(--faint); font-size:13px}
+  .subnote strong{color:var(--muted); font-weight:600}
+
+  /* ---- screenshot ---- */
+  .shot{position:relative; padding:34px 0 12px}
+  .shot .glow{
+    position:absolute; left:50%; top:38%; width:min(760px,92%); height:300px; transform:translate(-50%,-50%);
+    background:radial-gradient(closest-side, rgba(91,140,255,.45), rgba(157,107,255,.22) 60%, transparent);
+    filter:blur(46px); z-index:0; pointer-events:none;
+  }
+  .shot figure{position:relative; z-index:1; max-width:780px; margin:0 auto}
+  .shot img{
+    display:block; width:100%; height:auto; border-radius:var(--radius);
+    border:1px solid var(--border-bright); box-shadow:0 36px 90px rgba(0,0,0,.6);
+  }
+  .shot figcaption{text-align:center; color:var(--faint); font-size:13px; margin-top:14px}
+
+  /* ---- sections ---- */
+  section.block{padding:54px 0}
+  .eyebrow{color:var(--a1); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase}
+  h2{font-size:clamp(26px,4vw,34px); letter-spacing:-.02em; margin:8px 0 26px; font-weight:800}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:22px;
+    transition:transform .18s ease, border-color .18s ease, background .18s ease;
+  }
+  .card:hover{transform:translateY(-3px); border-color:var(--border-bright); background:var(--panel-strong)}
+  .chip{
+    width:42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:21px; margin-bottom:14px;
+    background:linear-gradient(160deg, rgba(91,140,255,.22), rgba(157,107,255,.18)); border:1px solid var(--border-bright);
+  }
+  .card h3{font-size:16.5px; margin-bottom:5px; letter-spacing:-.01em}
   .card p{margin:0; color:var(--muted); font-size:14.5px}
-  .card .ico{font-size:22px}
 
-  .steps{counter-reset:step; list-style:none; padding:0; margin:0}
-  .steps li{position:relative; padding:0 0 18px 46px; counter-increment:step}
-  .steps li::before{
-    content:counter(step); position:absolute; left:0; top:0; width:30px; height:30px;
-    display:grid; place-items:center; border-radius:50%; background:var(--panel2);
-    border:1px solid var(--border); color:var(--accent2); font-weight:700; font-size:14px;
-  }
-  .steps li strong{display:block; margin-bottom:4px}
-  pre{
-    background:var(--panel); border:1px solid var(--border); border-radius:10px;
-    padding:14px 16px; overflow-x:auto; font-size:13.5px; line-height:1.55; margin:.4em 0 0;
-  }
-  pre code{color:#c9d6e4}
-  .muted{color:var(--muted)}
-  .keys{display:grid; grid-template-columns:auto 1fr; gap:10px 18px; align-items:center}
+  /* keyboard */
+  .keys{display:grid; grid-template-columns:auto 1fr; gap:12px 20px; align-items:center;
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:24px 26px}
   .keys .k{justify-self:start}
-  .note{background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent);
-    border-radius:8px; padding:12px 16px; color:var(--muted); font-size:14px; margin-top:14px}
+  .keys span.d{color:var(--muted); font-size:14.5px}
 
-  footer{text-align:center; color:var(--muted); font-size:13.5px; padding:48px 0 60px; border-top:1px solid var(--border); margin-top:30px}
+  /* steps */
+  .steps{counter-reset:step; list-style:none; display:grid; gap:14px}
+  .steps li{position:relative; padding:18px 18px 18px 64px; counter-increment:step;
+    background:var(--panel); border:1px solid var(--border); border-radius:14px}
+  .steps li::before{
+    content:counter(step); position:absolute; left:18px; top:16px; width:32px; height:32px;
+    display:grid; place-items:center; border-radius:10px; font-weight:800; font-size:15px; color:#fff;
+    background:linear-gradient(160deg,var(--a1),var(--a2));
+  }
+  .steps strong{display:block; margin-bottom:3px}
+  .steps .muted{color:var(--muted); font-size:14px}
+  pre{background:#0c1118; border:1px solid var(--border); border-radius:10px; padding:13px 15px;
+    overflow-x:auto; font-size:13.5px; line-height:1.55; margin-top:10px; color:#cdd9e6}
+  .note{background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--a1);
+    border-radius:10px; padding:13px 16px; color:var(--muted); font-size:14px; margin-top:16px}
 
-  @media (max-width:520px){ h1{font-size:34px} header{padding:60px 0 40px} }
+  footer{text-align:center; color:var(--faint); font-size:13.5px; padding:46px 0 64px; border-top:1px solid var(--border); margin-top:34px}
+  footer a{color:var(--muted)} footer a:hover{color:var(--text)}
+
+  /* scroll reveal (no-JS shows everything) */
+  .js .reveal{opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease}
+  .js .reveal.in{opacity:1; transform:none}
+  @media (prefers-reduced-motion:reduce){ .js .reveal{opacity:1; transform:none; transition:none} html{scroll-behavior:auto} }
 </style>
 </head>
 <body>
+
+<nav>
+  <div class="wrap">
+    <span class="brand"><span class="mk">📋</span> ClipHistory</span>
+    <span class="spacer"></span>
+    <a class="link" href="#features">Features</a>
+    <a class="link" href="#install">Install</a>
+    <a class="link" href="https://github.com/banegasn/clip-history">GitHub</a>
+    <a class="btn primary" href="https://github.com/banegasn/clip-history/releases/latest">Download</a>
+  </div>
+</nav>
+
 <header>
   <div class="wrap">
-    <div class="logo">📋</div>
-    <h1>ClipHistory</h1>
-    <p class="tagline">A tiny, open-source macOS clipboard-history manager. Lives in the menu bar, captures everything you copy, and brings it back with <kbd>⇧⌘V</kbd>.</p>
-    <div class="badges">
-      <span class="badge">macOS 14+</span>
-      <span class="badge">Swift 6 · SwiftUI</span>
-      <span class="badge">MIT licensed</span>
-      <span class="badge">~380 KB binary</span>
-    </div>
+    <span class="pill"><span class="dot"></span> Open source · macOS menu-bar app</span>
+    <h1>Your clipboard,<br><span class="grad">always one shortcut away.</span></h1>
+    <p class="tagline">A tiny macOS clipboard-history manager. Press <kbd>⇧⌘V</kbd> for a searchable history of everything you’ve copied — text, images and files — and paste it right back where you were.</p>
     <div class="cta">
-      <a class="btn" href="https://github.com/banegasn/clip-history/releases/latest">⬇︎ Download .dmg</a>
-      <a class="btn secondary" href="https://github.com/banegasn/clip-history">View on GitHub</a>
+      <a class="btn primary" href="https://github.com/banegasn/clip-history/releases/latest">⬇︎&nbsp; Download .dmg</a>
+      <a class="btn ghost" href="https://github.com/banegasn/clip-history">★&nbsp; Star on GitHub</a>
     </div>
-    <p class="muted" style="margin-top:14px; font-size:13.5px">Unsigned by Apple — on first launch use <strong>System Settings ▸ Privacy &amp; Security ▸ Open Anyway</strong>, then grant Accessibility.</p>
+    <p class="subnote">Free &amp; MIT-licensed · macOS 14+ · ~380&nbsp;KB. First launch: <strong>Open Anyway</strong> + grant Accessibility.</p>
   </div>
 </header>
 
+<div class="shot wrap reveal">
+  <div class="glow"></div>
+  <figure>
+    <img src="screenshot.png" alt="ClipHistory panel — searchable clipboard history showing text and image entries floating over the desktop" loading="lazy">
+    <figcaption>Hit ⇧⌘V anywhere · type to filter · ↵ to paste</figcaption>
+  </figure>
+</div>
+
 <main class="wrap">
 
-  <section>
-    <h2>Features</h2>
+  <section class="block reveal" id="features">
+    <span class="eyebrow">Features</span>
+    <h2>Small app, complete clipboard.</h2>
     <div class="grid">
-      <div class="card"><div class="ico">⌨️</div><h3>Global hotkey</h3><p><kbd>⇧⌘V</kbd> opens a centered, searchable history panel from anywhere.</p></div>
-      <div class="card"><div class="ico">🧲</div><h3>Text, images &amp; files</h3><p>Captures plain/rich text, copied images and screenshots, and Finder files.</p></div>
-      <div class="card"><div class="ico">💾</div><h3>Persistent</h3><p>SQLite-backed history that survives reboots, capped at the 200 most recent items.</p></div>
-      <div class="card"><div class="ico">⚡</div><h3>Paste in place</h3><p>Pick with <kbd>↵</kbd> and it pastes straight into the app you were just using.</p></div>
-      <div class="card"><div class="ico">🔎</div><h3>Search, expand &amp; manage</h3><p>Type to filter, <kbd>→</kbd> to expand full content, <kbd>⌘⌫</kbd> to delete, and Open links straight from the detail view.</p></div>
-      <div class="card"><div class="ico">🔒</div><h3>Privacy-aware</h3><p>Skips clips that password managers mark as concealed/transient. No network, ever.</p></div>
+      <div class="card"><div class="chip">⌨️</div><h3>Global hotkey</h3><p><kbd>⇧⌘V</kbd> opens a centered, searchable panel from any app.</p></div>
+      <div class="card"><div class="chip">🧲</div><h3>Text, images &amp; files</h3><p>Plain &amp; rich text, screenshots and images, and copied Finder files.</p></div>
+      <div class="card"><div class="chip">💾</div><h3>Persistent</h3><p>SQLite-backed history that survives reboots, capped at the 200 most recent items.</p></div>
+      <div class="card"><div class="chip">⚡</div><h3>Paste in place</h3><p>Pick with <kbd>↵</kbd> and it pastes straight into the app you were just using.</p></div>
+      <div class="card"><div class="chip">🛠️</div><h3>Search, expand &amp; manage</h3><p>Filter as you type, <kbd>→</kbd> to expand full content, <kbd>⌘⌫</kbd> to delete, Open links from detail.</p></div>
+      <div class="card"><div class="chip">🔒</div><h3>Private by design</h3><p>Skips password-manager clips. <strong>No network connections</strong> — everything stays local.</p></div>
     </div>
   </section>
 
-  <section id="install">
-    <h2>Install</h2>
-    <p class="muted">Requires macOS 14+ and a Swift toolchain (<code>xcode-select --install</code> is enough — full Xcode optional).</p>
-    <ol class="steps">
-      <li>
-        <strong>Clone the repo</strong>
-        <pre><code>git clone https://github.com/banegasn/clip-history.git
-cd clip-history</code></pre>
-      </li>
-      <li>
-        <strong>Create a stable signing identity (once)</strong>
-        <span class="muted">So the macOS Accessibility grant survives rebuilds.</span>
-        <pre><code>./setup-signing.sh</code></pre>
-      </li>
-      <li>
-        <strong>Build &amp; launch</strong>
-        <span class="muted">Assembles <code>ClipHistory.app</code> (and installs to <code>/Applications</code> if already present).</span>
-        <pre><code>./build-app.sh
-open ClipHistory.app</code></pre>
-      </li>
-      <li>
-        <strong>Grant Accessibility (once)</strong>
-        <span class="muted">System Settings ▸ Privacy &amp; Security ▸ Accessibility ▸ enable <strong>ClipHistory</strong>. Needed so it can synthesize the <kbd>⌘V</kbd> that pastes your pick.</span>
-      </li>
-    </ol>
-    <div class="note">Without Accessibility, selecting an item still copies it to the clipboard — you’d just press <kbd>⌘V</kbd> yourself.</div>
-  </section>
-
-  <section>
-    <h2>Keyboard</h2>
+  <section class="block reveal">
+    <span class="eyebrow">Keyboard</span>
+    <h2>Built for your hands.</h2>
     <div class="keys">
-      <kbd class="k">⇧⌘V</kbd><span class="muted">Open / focus the history panel</span>
-      <kbd class="k">↑ ↓</kbd><span class="muted">Move selection</span>
-      <kbd class="k">→</kbd><span class="muted">Expand the full content of a clip (Open Link button for URLs)</span>
-      <kbd class="k">← / Esc</kbd><span class="muted">Back from detail / dismiss the panel</span>
-      <kbd class="k">↵ Enter</kbd><span class="muted">Paste the selection into the previous app</span>
-      <kbd class="k">⌘⌫</kbd><span class="muted">Delete the selected entry from history</span>
-      <span class="k muted">type</span><span class="muted">Filter the history</span>
+      <kbd class="k">⇧⌘V</kbd><span class="d">Open / focus the history panel</span>
+      <kbd class="k">↑ ↓</kbd><span class="d">Move the selection</span>
+      <kbd class="k">→</kbd><span class="d">Expand a clip’s full content (Open Link button for URLs)</span>
+      <kbd class="k">← / Esc</kbd><span class="d">Back from detail · dismiss the panel</span>
+      <kbd class="k">↵ Enter</kbd><span class="d">Paste the selection into the previous app</span>
+      <kbd class="k">⌘⌫</kbd><span class="d">Delete the selected entry from history</span>
+      <span class="k d" style="font-style:italic">type…</span><span class="d">Filter the history</span>
     </div>
   </section>
 
-  <section>
-    <h2>How it works</h2>
+  <section class="block reveal" id="install">
+    <span class="eyebrow">Install</span>
+    <h2>Up and running in a minute.</h2>
+    <ol class="steps">
+      <li><strong>Download &amp; drag to Applications</strong><span class="muted">Grab the <a href="https://github.com/banegasn/clip-history/releases/latest">latest .dmg</a>, open it, drag <strong>ClipHistory</strong> into Applications.</span></li>
+      <li><strong>Open it the first time</strong><span class="muted">It isn’t notarized by Apple, so open <strong>System Settings ▸ Privacy &amp; Security</strong> and click <strong>Open Anyway</strong> (or run <code>xattr -dr com.apple.quarantine /Applications/ClipHistory.app</code>).</span></li>
+      <li><strong>Grant Accessibility</strong><span class="muted">When asked — <strong>System Settings ▸ Privacy &amp; Security ▸ Accessibility</strong> → enable ClipHistory. Needed so it can paste with ⌘V.</span></li>
+    </ol>
+    <div class="note">Prefer building from source? <code>./setup-signing.sh &amp;&amp; ./build-app.sh</code> — see the <a href="https://github.com/banegasn/clip-history#readme">README</a>.</div>
+  </section>
+
+  <section class="block reveal">
+    <span class="eyebrow">Under the hood</span>
+    <h2>How it works.</h2>
     <div class="grid">
-      <div class="card"><h3>Detect copies</h3><p>Polls <code>NSPasteboard.changeCount</code> (~0.4s) — macOS has no clipboard-change event.</p></div>
-      <div class="card"><h3>Global shortcut</h3><p>Carbon <code>RegisterEventHotKey</code> — system-wide, no permission needed to listen.</p></div>
-      <div class="card"><h3>Paste back</h3><p>Re-activates the prior app, then posts a synthetic <kbd>⌘V</kbd> via <code>CGEvent</code>.</p></div>
-      <div class="card"><h3>Storage</h3><p>SQLite in Application Support; images as PNG blobs, thumbnails kept in memory.</p></div>
+      <div class="card"><div class="chip">🔁</div><h3>Detect copies</h3><p>Polls <code>NSPasteboard.changeCount</code> — macOS has no clipboard-change event.</p></div>
+      <div class="card"><div class="chip">🎯</div><h3>Global shortcut</h3><p>Carbon <code>RegisterEventHotKey</code> — system-wide, no permission to listen.</p></div>
+      <div class="card"><div class="chip">📥</div><h3>Paste back</h3><p>Re-activates the prior app, then posts a synthetic <kbd>⌘V</kbd> via <code>CGEvent</code>.</p></div>
+      <div class="card"><div class="chip">🗄️</div><h3>Storage</h3><p>SQLite in Application Support; images as PNG blobs, thumbnails in memory.</p></div>
     </div>
   </section>
 
@@ -164,8 +236,17 @@ open ClipHistory.app</code></pre>
 
 <footer>
   <div class="wrap">
-    <a href="https://github.com/banegasn/clip-history">banegasn/clip-history</a> · MIT License · Built with Swift &amp; SwiftUI
+    <a href="https://github.com/banegasn/clip-history">banegasn/clip-history</a> · MIT License · Built with Swift &amp; SwiftUI<br>
+    Made for macOS · ⇧⌘V
   </div>
 </footer>
+
+<script>
+  document.documentElement.classList.add('js');
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.06 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
 </body>
 </html>
