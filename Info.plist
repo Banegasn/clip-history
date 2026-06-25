@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>ClipHistory</string>
+    <key>CFBundleDisplayName</key>
+    <string>ClipHistory</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.nico.cliphistory</string>
+    <key>CFBundleExecutable</key>
+    <string>ClipHistory</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <!-- Menu-bar agent: no Dock icon, no app menu. -->
+    <key>LSUIElement</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipHistory — open-source macOS clipboard manager</title>
+<meta name="description" content="A tiny, open-source macOS clipboard-history manager. Lives in the menu bar, captures text, images and files, and brings them back with ⇧⌘V.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a313c;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#4f8cff; --accent2:#7aa2ff;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 50% -10%, #182338 0%, var(--bg) 55%);
+    color:var(--text); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent2); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:880px; margin:0 auto; padding:0 22px}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  kbd{
+    background:var(--panel2); border:1px solid var(--border); border-bottom-width:2px;
+    border-radius:6px; padding:.1em .45em; font-size:.85em; color:var(--text); white-space:nowrap;
+  }
+
+  header{text-align:center; padding:84px 0 52px}
+  .logo{font-size:64px; line-height:1}
+  h1{font-size:44px; margin:.3em 0 .1em; letter-spacing:-.02em}
+  .tagline{color:var(--muted); font-size:19px; margin:0 auto; max-width:560px}
+  .badges{margin-top:18px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap}
+  .badge{background:var(--panel); border:1px solid var(--border); color:var(--muted);
+    padding:4px 11px; border-radius:999px; font-size:13px}
+  .cta{margin-top:30px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap}
+  .btn{
+    display:inline-block; padding:12px 22px; border-radius:10px; font-weight:600; font-size:15px;
+    background:linear-gradient(180deg,var(--accent2),var(--accent)); color:#fff; border:1px solid #3b6fd0;
+  }
+  .btn:hover{text-decoration:none; filter:brightness(1.07)}
+  .btn.secondary{background:var(--panel); color:var(--text); border:1px solid var(--border)}
+
+  section{padding:34px 0}
+  h2{font-size:25px; letter-spacing:-.01em; margin:0 0 18px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 18px 16px}
+  .card h3{margin:.1em 0 .35em; font-size:16px}
+  .card p{margin:0; color:var(--muted); font-size:14.5px}
+  .card .ico{font-size:22px}
+
+  .steps{counter-reset:step; list-style:none; padding:0; margin:0}
+  .steps li{position:relative; padding:0 0 18px 46px; counter-increment:step}
+  .steps li::before{
+    content:counter(step); position:absolute; left:0; top:0; width:30px; height:30px;
+    display:grid; place-items:center; border-radius:50%; background:var(--panel2);
+    border:1px solid var(--border); color:var(--accent2); font-weight:700; font-size:14px;
+  }
+  .steps li strong{display:block; margin-bottom:4px}
+  pre{
+    background:var(--panel); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; font-size:13.5px; line-height:1.55; margin:.4em 0 0;
+  }
+  pre code{color:#c9d6e4}
+  .muted{color:var(--muted)}
+  .keys{display:grid; grid-template-columns:auto 1fr; gap:10px 18px; align-items:center}
+  .keys .k{justify-self:start}
+  .note{background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:8px; padding:12px 16px; color:var(--muted); font-size:14px; margin-top:14px}
+
+  footer{text-align:center; color:var(--muted); font-size:13.5px; padding:48px 0 60px; border-top:1px solid var(--border); margin-top:30px}
+
+  @media (max-width:520px){ h1{font-size:34px} header{padding:60px 0 40px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="logo">📋</div>
+    <h1>ClipHistory</h1>
+    <p class="tagline">A tiny, open-source macOS clipboard-history manager. Lives in the menu bar, captures everything you copy, and brings it back with <kbd>⇧⌘V</kbd>.</p>
+    <div class="badges">
+      <span class="badge">macOS 14+</span>
+      <span class="badge">Swift 6 · SwiftUI</span>
+      <span class="badge">MIT licensed</span>
+      <span class="badge">~380 KB binary</span>
+    </div>
+    <div class="cta">
+      <a class="btn" href="https://github.com/banegasn/clip-history">View on GitHub</a>
+      <a class="btn secondary" href="#install">Install</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>Features</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">⌨️</div><h3>Global hotkey</h3><p><kbd>⇧⌘V</kbd> opens a centered, searchable history panel from anywhere.</p></div>
+      <div class="card"><div class="ico">🧲</div><h3>Text, images &amp; files</h3><p>Captures plain/rich text, copied images and screenshots, and Finder files.</p></div>
+      <div class="card"><div class="ico">💾</div><h3>Persistent</h3><p>SQLite-backed history that survives reboots, capped at the 200 most recent items.</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>Paste in place</h3><p>Pick with <kbd>↵</kbd> and it pastes straight into the app you were just using.</p></div>
+      <div class="card"><div class="ico">🔎</div><h3>Search &amp; expand</h3><p>Type to filter, <kbd>→</kbd> to expand a clip’s full content, 2-line previews.</p></div>
+      <div class="card"><div class="ico">🔒</div><h3>Privacy-aware</h3><p>Skips clips that password managers mark as concealed/transient. No network, ever.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p class="muted">Requires macOS 14+ and a Swift toolchain (<code>xcode-select --install</code> is enough — full Xcode optional).</p>
+    <ol class="steps">
+      <li>
+        <strong>Clone the repo</strong>
+        <pre><code>git clone https://github.com/banegasn/clip-history.git
+cd clip-history</code></pre>
+      </li>
+      <li>
+        <strong>Create a stable signing identity (once)</strong>
+        <span class="muted">So the macOS Accessibility grant survives rebuilds.</span>
+        <pre><code>./setup-signing.sh</code></pre>
+      </li>
+      <li>
+        <strong>Build &amp; launch</strong>
+        <span class="muted">Assembles <code>ClipHistory.app</code> (and installs to <code>/Applications</code> if already present).</span>
+        <pre><code>./build-app.sh
+open ClipHistory.app</code></pre>
+      </li>
+      <li>
+        <strong>Grant Accessibility (once)</strong>
+        <span class="muted">System Settings ▸ Privacy &amp; Security ▸ Accessibility ▸ enable <strong>ClipHistory</strong>. Needed so it can synthesize the <kbd>⌘V</kbd> that pastes your pick.</span>
+      </li>
+    </ol>
+    <div class="note">Without Accessibility, selecting an item still copies it to the clipboard — you’d just press <kbd>⌘V</kbd> yourself.</div>
+  </section>
+
+  <section>
+    <h2>Keyboard</h2>
+    <div class="keys">
+      <kbd class="k">⇧⌘V</kbd><span class="muted">Open / focus the history panel</span>
+      <kbd class="k">↑ ↓</kbd><span class="muted">Move selection</span>
+      <kbd class="k">→</kbd><span class="muted">Expand the full content of a clip</span>
+      <kbd class="k">← / Esc</kbd><span class="muted">Back from detail / dismiss the panel</span>
+      <kbd class="k">↵ Enter</kbd><span class="muted">Paste the selection into the previous app</span>
+      <span class="k muted">type</span><span class="muted">Filter the history</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="grid">
+      <div class="card"><h3>Detect copies</h3><p>Polls <code>NSPasteboard.changeCount</code> (~0.4s) — macOS has no clipboard-change event.</p></div>
+      <div class="card"><h3>Global shortcut</h3><p>Carbon <code>RegisterEventHotKey</code> — system-wide, no permission needed to listen.</p></div>
+      <div class="card"><h3>Paste back</h3><p>Re-activates the prior app, then posts a synthetic <kbd>⌘V</kbd> via <code>CGEvent</code>.</p></div>
+      <div class="card"><h3>Storage</h3><p>SQLite in Application Support; images as PNG blobs, thumbnails kept in memory.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/banegasn/clip-history">banegasn/clip-history</a> · MIT License · Built with Swift &amp; SwiftUI
+  </div>
+</footer>
+</body>
+</html>
